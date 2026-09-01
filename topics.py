@@ -1,0 +1,20 @@
+TOPICS = [
+    "1-dars. Odobning ta'rifi, ahamiyati va manbai",
+    "2-dars. Islomiy odoblarning xususiyatlari",
+    "3-dars. Kalom va so'zlashish odobi",
+    "4-dars. Salomlashish va uy-joy odoblari",
+    "5-dars. Ovqatlanish va taomlanish hukmlari",
+    "6-dars. Ichimlik ichish va mehmondorchilik odoblari",
+    "7-dars. To'y, marosim va fayzli majlislar odobi",
+    "8-dars. Islomiy bayramlar va tantanalar odobi",
+    "9-dars. Dam olish joylari va sayrgohlardagi odoblar",
+    "10-dars. Yoshlar odobi va muomala madaniyati",
+    "11-dars. Ayollar va erkaklarning kiyinish odoblari",
+    "12-dars. Tahorat, poklik va atrof-muhit ozodaligi",
+    "13-dars. Yo'l va yo'lovchi odoblari",
+    "14-dars. Ilm olish va ustozga ehtirom odoblari",
+    "15-dars. Suhbat qurish va chiroyli tinglash odoblari",
+    "16-dars. Kasb-hunar va ish bajaruvchining odoblari",
+    "17-dars. Bemorlik va bemorni ziyorat qilish odoblari",
+    "18-dars. O'lim, janoza va ta'ziya bildirish odoblari"
+]
