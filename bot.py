@@ -48,39 +48,41 @@ async def cmd_start(message: types.Message):
     )
 
 async def send_lesson(topic: str, chat_id: str | int):
-    text = generate_lesson_text(topic)
+    # 1. Matnni shakllantirish (Event loop qotib qolmasligi uchun alohida oqimda ishga tushiramiz)
+    text = await asyncio.to_thread(generate_lesson_text, topic)
     if "Kechirasiz" in text and len(text) < 100:
         await bot.send_message(chat_id=chat_id, text=text)
         return
         
+    # 2. Audioni yaratish
     audio_path = await generate_audio(text)
     
-    image_prompt = urllib.parse.quote(f"Islamic beautiful nature, peaceful, highly detailed, no text, suitable for topic: {topic}")
-    image_url = f"https://image.pollinations.ai/prompt/{image_prompt}?width=1024&height=1024&nologo=true"
-    
     try:
-        await bot.send_photo(chat_id=chat_id, photo=URLInputFile(image_url), caption=f"📚 Mavzu: {topic}")
+        # Agar audio yaratilgan bo'lsa, ovozli xabarni yuborish
+        if audio_path:
+            audio_file = FSInputFile(audio_path)
+            await bot.send_voice(chat_id=chat_id, voice=audio_file, caption=f"📚 Mavzu: {topic}\n\n🎙 Ustoz Madina ovozida darsni tinglang")
         
-        audio_file = FSInputFile(audio_path)
-        await bot.send_voice(chat_id=chat_id, voice=audio_file, caption="🎙 Ustoz Madina ovozida darsni tinglang")
-        
+        # To'liq matnni yuborish
         for i in range(0, len(text), 4000):
             await bot.send_message(chat_id=chat_id, text=text[i:i+4000])
             
     except Exception as e:
         print(f"Xatolik (yuborishda): {e}")
+        raise e
     finally:
-        if os.path.exists(audio_path):
+        if audio_path and os.path.exists(audio_path):
             os.remove(audio_path)
 
 # Reply tugmalari bosilganda ishlaydi
 @dp.message(F.text.in_(TOPICS))
 async def handle_topic_selection(message: types.Message):
-    await message.answer("Biroz kuting, darsingiz tayyorlanmoqda... ⏳ bu 1-2 daqiqa vaqt olishi mumkin.")
+    await message.answer("Biroz kuting, darsingiz tayyorlanib kanalga jo'natilmoqda... ⏳ bu 1-2 daqiqa vaqt olishi mumkin.")
     try:
-        await send_lesson(message.text, message.chat.id)
+        await send_lesson(message.text, CHANNEL_ID)
+        await message.answer("Dars muvaffaqiyatli tarzda kanalga joylandi! ✅")
     except Exception as e:
-        await message.answer(f"Xatolik yuz berdi: {e}")
+        await message.answer(f"Xatolik yuz berdi (Bot kanalga admin qilinganiga ishonch hosil qiling): {e}")
 
 # Menu tugmasidan (komandalardan) bosilganda ishlaydi
 @dp.message(F.text.startswith('/dars_'))
@@ -90,10 +92,11 @@ async def handle_dars_command(message: types.Message):
         dars_num = int(cmd.replace('/dars_', ''))
         if 1 <= dars_num <= len(TOPICS):
             topic = TOPICS[dars_num - 1]
-            await message.answer("Biroz kuting, darsingiz tayyorlanmoqda... ⏳ bu 1-2 daqiqa vaqt olishi mumkin.")
-            await send_lesson(topic, message.chat.id)
-    except Exception:
-        pass
+            await message.answer("Biroz kuting, darsingiz tayyorlanib kanalga jo'natilmoqda... ⏳ bu 1-2 daqiqa vaqt olishi mumkin.")
+            await send_lesson(topic, CHANNEL_ID)
+            await message.answer("Dars muvaffaqiyatli tarzda kanalga joylandi! ✅")
+    except Exception as e:
+        await message.answer(f"Xatolik yuz berdi (Bot kanalga admin qilinganiga ishonch hosil qiling): {e}")
 
 current_topic_index = 0
 
@@ -137,14 +140,17 @@ async def self_ping():
 async def main():
     dp.startup.register(on_startup)
     
+    # Veb serverni ishga tushirish (Render uchun)
+    asyncio.create_task(start_web_server())
+    
+    # Self-ping har 10 daqiqada (Render uyquga ketmasligi uchun)
+    scheduler.add_job(self_ping, 'interval', minutes=10)
+    
     scheduler.add_job(scheduled_job, 'cron', hour=7, minute=0)
     scheduler.add_job(scheduled_job, 'cron', hour=11, minute=0)
     scheduler.add_job(scheduled_job, 'cron', hour=12, minute=0)
     
-    scheduler.add_job(self_ping, 'interval', minutes=10)
     scheduler.start()
-    
-    await start_web_server()
     
     print("Bot telegramga ulandi va xizmatga tayyor...")
     await dp.start_polling(bot)
