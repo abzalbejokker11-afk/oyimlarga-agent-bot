@@ -114,9 +114,11 @@ def get_cloudflare_headers():
     return None
 
 def get_next_topic_index():
-    index = 0
+    index = None
     url = get_cloudflare_url()
     headers = get_cloudflare_headers()
+    
+    # 1. Avval Cloudflare'dan o'qishga harakat qilamiz
     if url and headers:
         try:
             resp = requests.get(url, headers=headers, timeout=10)
@@ -124,8 +126,9 @@ def get_next_topic_index():
                 index = int(resp.text.strip())
         except Exception as e:
             print(f"Cloudflare KV o'qishda xatolik: {e}")
-    else:
-        # Lokalda test qilish uchun fallback
+            
+    # 2. Agar Cloudflare'da o'chirilgan bo'lsa yoki xato bersa, Local Zaxiradan o'qiymiz
+    if index is None:
         if os.path.exists("state.json"):
             try:
                 import json
@@ -133,9 +136,23 @@ def get_next_topic_index():
                     index = json.load(f).get("current_topic_index", 0)
             except Exception:
                 pass
+                
+    # 3. Hech qayerda topilmasa, 0 dan boshlaymiz
+    if index is None:
+        index = 0
+        
     return index
 
 def save_next_topic_index(index):
+    # 1. Doimiy ravishda lokal zaxiraga (state.json) yozib qo'yamiz (Boshqa agent o'chirolmaydi)
+    try:
+        import json
+        with open("state.json", 'w') as f:
+            json.dump({"current_topic_index": index}, f)
+    except Exception:
+        pass
+        
+    # 2. Cloudflare KV ga ham yozamiz
     url = get_cloudflare_url()
     headers = get_cloudflare_headers()
     if url and headers:
@@ -143,14 +160,6 @@ def save_next_topic_index(index):
             requests.put(url, headers=headers, data=str(index), timeout=10)
         except Exception as e:
             print(f"Cloudflare KV yozishda xatolik: {e}")
-    else:
-        # Lokalda test qilish uchun fallback
-        try:
-            import json
-            with open("state.json", 'w') as f:
-                json.dump({"current_topic_index": index}, f)
-        except Exception:
-            pass
 
 async def scheduled_job():
     index = get_next_topic_index()
