@@ -98,27 +98,59 @@ async def handle_dars_command(message: types.Message):
     except Exception as e:
         await message.answer(f"Xatolik yuz berdi (Bot kanalga admin qilinganiga ishonch hosil qiling): {e}")
 
-import json
+import requests
 
-STATE_FILE = "state.json"
+def get_cloudflare_url():
+    account_id = os.environ.get("CF_ACCOUNT_ID")
+    namespace_id = os.environ.get("CF_NAMESPACE_ID")
+    if account_id and namespace_id:
+        return f"https://api.cloudflare.com/client/v4/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/current_topic_index"
+    return None
+
+def get_cloudflare_headers():
+    token = os.environ.get("CF_API_TOKEN")
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return None
 
 def get_next_topic_index():
     index = 0
-    if os.path.exists(STATE_FILE):
+    url = get_cloudflare_url()
+    headers = get_cloudflare_headers()
+    if url and headers:
         try:
-            with open(STATE_FILE, 'r') as f:
-                data = json.load(f)
-                index = data.get("current_topic_index", 0)
-        except Exception:
-            pass
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                index = int(resp.text.strip())
+        except Exception as e:
+            print(f"Cloudflare KV o'qishda xatolik: {e}")
+    else:
+        # Lokalda test qilish uchun fallback
+        if os.path.exists("state.json"):
+            try:
+                import json
+                with open("state.json", 'r') as f:
+                    index = json.load(f).get("current_topic_index", 0)
+            except Exception:
+                pass
     return index
 
 def save_next_topic_index(index):
-    try:
-        with open(STATE_FILE, 'w') as f:
-            json.dump({"current_topic_index": index}, f)
-    except Exception:
-        pass
+    url = get_cloudflare_url()
+    headers = get_cloudflare_headers()
+    if url and headers:
+        try:
+            requests.put(url, headers=headers, data=str(index), timeout=10)
+        except Exception as e:
+            print(f"Cloudflare KV yozishda xatolik: {e}")
+    else:
+        # Lokalda test qilish uchun fallback
+        try:
+            import json
+            with open("state.json", 'w') as f:
+                json.dump({"current_topic_index": index}, f)
+        except Exception:
+            pass
 
 async def scheduled_job():
     index = get_next_topic_index()
