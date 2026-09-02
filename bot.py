@@ -98,15 +98,37 @@ async def handle_dars_command(message: types.Message):
     except Exception as e:
         await message.answer(f"Xatolik yuz berdi (Bot kanalga admin qilinganiga ishonch hosil qiling): {e}")
 
-current_topic_index = 0
+import json
+
+STATE_FILE = "state.json"
+
+def get_next_topic_index():
+    index = 0
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                data = json.load(f)
+                index = data.get("current_topic_index", 0)
+        except Exception:
+            pass
+    return index
+
+def save_next_topic_index(index):
+    try:
+        with open(STATE_FILE, 'w') as f:
+            json.dump({"current_topic_index": index}, f)
+    except Exception:
+        pass
 
 async def scheduled_job():
-    global current_topic_index
-    if current_topic_index >= len(TOPICS):
-        current_topic_index = 0
+    index = get_next_topic_index()
+    if index >= len(TOPICS):
+        index = 0
         
-    topic = TOPICS[current_topic_index]
-    current_topic_index += 1
+    topic = TOPICS[index]
+    
+    # Keyingi dars uchun indeksni saqlaymiz
+    save_next_topic_index(index + 1)
     
     try:
         print(f"[{datetime.now()}] Kanalga dars yuborilyapti: {topic}")

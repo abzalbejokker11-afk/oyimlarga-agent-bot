@@ -11,7 +11,7 @@ async def generate_audio(text: str) -> str | None:
     filename = f"audio_{uuid.uuid4().hex}.mp3"
     filepath = os.path.join(os.getcwd(), filename)
     
-    communicate = edge_tts.Communicate(clean_text, voice)
+    communicate = edge_tts.Communicate(clean_text, voice, rate='-10%')
     try:
         await asyncio.wait_for(communicate.save(filepath), timeout=180.0)
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
