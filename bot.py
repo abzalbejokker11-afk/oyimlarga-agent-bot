@@ -62,10 +62,9 @@ async def send_lesson(topic: str, chat_id: str | int):
         if audio_path:
             audio_file = FSInputFile(audio_path)
             await bot.send_voice(chat_id=chat_id, voice=audio_file, caption=f"📚 Mavzu: {topic}\n\n🎙 Ustoz Madina ovozida darsni tinglang")
-        
-        # To'liq matnni yuborish
-        for i in range(0, len(text), 4000):
-            await bot.send_message(chat_id=chat_id, text=text[i:i+4000])
+        else:
+            # Agar kutilmaganda audio yaratilmay qolsa, faqat zaxira sifatida darsni yuborib qoyadi (lekin odatda audio_path bo'ladi)
+            await bot.send_message(chat_id=chat_id, text=f"📚 Mavzu: {topic}\n\nKechirasiz, audioni yaratishda kichik muammo yuz berdi. Matn quyidagicha:\n\n{text[:3000]}")
             
     except Exception as e:
         print(f"Xatolik (yuborishda): {e}")
